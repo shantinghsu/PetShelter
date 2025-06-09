@@ -1,0 +1,86 @@
+<greet>
+    [ask for] willing to use the program
+        (yes)
+            continue
+        (no)
+            exit the program
+
+<current inventory?>
+(yes)
+    [ask for] file name
+    place into DYNAMIC array of Pets*
+        first line of file : max size of the shelter
+(no)
+    [ask for] max size of the shelter
+    create a DYNAMIC array of Pets*
+    Pets* [MAX_SIZE];
+
+<menu>
+    <Add>
+        if (capacity >= MAX_SIZE)
+            prompt user
+            return
+        add new pet
+        [ask] interested adopter?
+            (yes)
+                [ask for] name & tel.
+    <Longest Resident>
+        print out the longest resident in the shelter
+    <Save>
+        Save MAX_SIZE in the first line
+        format: breed,days_in_shelter,id,name,age,sex,trait
+    <Exit>
+        Just exit without asking
+        Shut down the program
+
+
+<function>
+    <add_pet>
+    <longest_resident>
+    <save>
+    <exit>
+
+    <print_daily_care_tasks_list>
+        grooming
+            dogs: every day
+            cats: every 3 days
+
+        checkups
+            all pets: every 7 days
+
+        List:
+            Grooming: A, B, C
+            Checkup: D
+
+        Grooming Needed:        Checkup Needed:
+        1.                      *No pet needs a checkup*
+        2. 
+        3. 
+            
+        if (needed_groom == 0)
+            (left)
+                cout << *No pet needs a checkup*;
+                    with space
+        else
+            print name
+        
+        if (needed_checkup == 0)
+            (right)
+                cout << *No pet needs a checkup*;
+                    with new line
+        else 
+            print name
+        
+        if (groom_list[i] == empty) //end of list
+            left (groom) >> add space 
+            right (checkup) >> endl
+
+    <contact_adopter> (days > 10)
+        (has InterestedAdopter)
+            print out name & tel. of adopter
+            print out pet's name
+            remove the pet from shelter
+        (no InterestedAdopter)
+            give reminder
+        (days >= 15)
+            remove the pet from shelter
