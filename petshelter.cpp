@@ -15,44 +15,48 @@ int main_menu(int options);
 int contact_menu(int options);
 int input(int options);
 
-void greet(vector<Pets*>& roster);
-int get_max();
-Pets** load_shelter(Pets** roster, int &count, int& max); //UPD
+void greet(vector<Pets*>& roster); //UPD
+bool exist_inventory(); //New UPD
+int get_max(); //UPD
+void load_shelter(vector<Pets*>& roster, int& max);
+
+void print_title(); //New UPD
 
 void print(const vector<Pets*>& roster); //UPD
-void add_pet(Pets** roster, int &count, int max);
-void longest_resident(vector<Pets*>& roster); //UPD
+void add_pet(vector<Pets*>& roster, int max); //UPD
+void longest_resident(const vector<Pets*>& roster); //UPD
 void daily_tasks(vector<Pets*>& roster); //UPD
-void contact_adopter(vector<Pets*>& roster);
+void contact_adopter(vector<Pets*>& roster, vector<Pets*>& waiting_roster, vector<Pets*>& having_roster);
 void save(vector<Pets*>& roster, int max); //UPD
 void exit_the_program(vector<Pets*>& roster); //UPD
 
-void contact_announce(vector<Pets*>& roster, int count, int &waiting_count, int &having_count);
-void remove_fullday(vector<Pets*> roster); //UPD
+void contact_announce(vector<Pets*>& roster, vector<Pets*>& waiting_roster, vector<Pets*>& having_roster); //UPD
+void remove_fullday(vector<Pets*>& roster); //UPD
 void contact_needed_list(const vector<Pets*>& roster, vector<Pets*>& waiting); //UPD
 void get_having_list(const vector<Pets*>& roster, vector<Pets*>& having); //UPD
 
 //contact menu functions
-void view_contact_needed(Pets** waiting_roster, int waiting_count, Pets** having_roster, int having_count);
-void become_interested_adopter(Pets** roster, int count);
-void adopt_pet(Pets** roster, int &count);
+void view_contact_needed(const vector<Pets*>& waiting_roster, const vector<Pets*>& having_roster); //UPD
+void become_interested_adopter(vector<Pets*>& roster); //UPD
+void adopt_pet(vector<Pets*>& roster); //UPD
 
 
 int main()
 {
     vector<Pets*> pets;
     greet(pets);
-    int max_size = get_max();
-    if (max_size == 0)
-        pets = load_shelter(pets, pet_count, max_size);
+    int max_size = 0;
+    bool have_inventory = exist_inventory();
+    if (have_inventory)
+        load_shelter(pets, max_size);
     else
-        pets = new Pets*[max_size];
+        max_size = get_max();
     do
     {
-        int waiting_adopter_pets = 0;
-        int having_adopter_pets = 0;
-        remove_fullday(pets, pet_count);
-        contact_announce(pets, pet_count, waiting_adopter_pets, having_adopter_pets);
+        vector<Pets*> waiting_adopter_pets;
+        vector<Pets*> having_adopter_pets;
+        remove_fullday(pets);
+        contact_announce(pets, waiting_adopter_pets, having_adopter_pets);
         int option = main_menu(7);
         switch (option)
         {
@@ -60,7 +64,7 @@ int main()
                 print(pets);
                 break;
             case 2:
-                add_pet(pets, pet_count, max_size);
+                add_pet(pets, max_size);
                 break;
             case 3:
                 longest_resident(pets);
@@ -69,7 +73,7 @@ int main()
                 daily_tasks(pets);
                 break;
             case 5:
-                contact_adopter(pets);
+                contact_adopter(pets, waiting_adopter_pets, having_adopter_pets);
                 break;
             case 6:
                 save(pets, max_size);
@@ -153,38 +157,42 @@ void greet(vector<Pets*>& roster)
     } while (yn != "y");
 }
 
-int get_max() 
+bool exist_inventory()
 {
     //ask for their inventory and get the max size of shelter
-    int max = 0;
     cout << "Is there a current inventory? (y/n) >> ";
     string yn;
-    cin >> yn;
-    do 
+    do
     {
-        if (yn == "n")
-        {
-            cout << "Please enter the max size of the shelter: ";
-            cin >> max;
-            if (max < 0)
-            {
-                cout << "Max size cannot be negative!" << endl;
-                continue;
-            }
-            break;
-        }
-        else if (yn != "y")
+        cin >> yn;
+        if (yn != "y" && yn != "n")
         {
             cout << "Please enter \"y\" or \"n\" >> ";
             cin >> yn;
         }
-    } while (yn != "y" || max < 0);
+    } while (yn != "y" && yn != "n");
+    return yn == "y";
+}
+
+int get_max() 
+{
+    int max = 0;
+    do
+    {
+        cout << "Please enter the max size of the shelter: ";
+        cin >> max;
+        if (max < 0)
+        {
+            cout << "Max size cannot be negative!" << endl;
+        }
+    } while (max < 0);
+    
     return max;
 }
 
 
 //option
-Pets** load_shelter(Pets** roster, int &count, int& max)
+void load_shelter(vector<Pets*>& roster, int& max)
 {   
     string filename;
     ifstream ifs;
@@ -197,20 +205,14 @@ Pets** load_shelter(Pets** roster, int &count, int& max)
         {
             cout << "File not found." << endl;
             max = get_max();
-            if (max >= 0)
-            {
-                roster = new Pets*[max];
-                return roster;
-            }
         }
     } while (!ifs);
     
     cout << "Successfully opened." << endl;
-    //first line -> shelter size
+    //first line -> shelter capacity
     string size;
     getline(ifs,size);
     max = stoi(size);
-    roster = new Pets*[max];
 
     //format: breed,days_in_shelter,id,name,age,sex,trait,adopter_name,phone_number
     string line;
@@ -231,9 +233,9 @@ Pets** load_shelter(Pets** roster, int &count, int& max)
         
         //check if ID exists (no same ID in a shelter)
         bool id_exists = false;
-        for (int i = 0; i < count; i++)
+        for (auto r : roster)
         {
-            if (roster[i]->get_id() == id)
+            if (r->get_id() == id)
             {
                 id_exists = true;
                 break;
@@ -252,20 +254,17 @@ Pets** load_shelter(Pets** roster, int &count, int& max)
         getline(info, tel);
 
         if (breed == "Dog")
-            roster[count] = new Dog(id, name, ch);
+            roster.push_back(new Dog(id, name, ch));
         else if (breed == "Cat")
-            roster[count] = new Cat(id, name, ch);
-        roster[count]->add_day(stoi(days_str));
-        roster[count]->set_age(age);
-        roster[count]->set_sex(sex);
-        roster[count]->set_adopter(adopter_name, tel);
-        
-        count++;
+            roster.push_back(new Cat(id, name, ch));
+        roster.back()->add_day(stoi(days_str));
+        roster.back()->set_age(age);
+        roster.back()->set_sex(sex);
+        roster.back()->set_adopter(adopter_name, tel);
     }
-    return roster;
 }
 
-void print(const vector<Pets*>& roster)
+void print_title()
 {
     cout << setw(7) << left << "Breed"
             << setw(6) << left << "Days"
@@ -276,15 +275,21 @@ void print(const vector<Pets*>& roster)
             << setw(8) << left << "Trait"
             << setw(10) << left << "Adopter"
             << "Tel." << endl;
+}
+
+void print(const vector<Pets*>& roster)
+{
+    print_title();
     for (auto r : roster)
     {
         r->print_info(cout, "table");
     }
 }
 
-void add_pet(Pets** roster, int &count, int max)
+void add_pet(vector<Pets*>& roster, int max)
 {
     //full capacity
+    int count = roster.size();
     if (count >= max) 
     {
         cout << "Sorry! Our shelter is full." << endl;
@@ -357,7 +362,7 @@ void add_pet(Pets** roster, int &count, int max)
             cin >> ch;
         } while (ch != "Large" && ch != "Medium" && ch != "Small");
         
-        roster[count] = new Dog(id, name, ch);
+        roster.push_back(new Dog(id, name, ch));
     }
     else if (breed == "Cat")
     {
@@ -367,21 +372,19 @@ void add_pet(Pets** roster, int &count, int max)
             cin >> ch;
         } while (ch != "Long" && ch != "Short");
 
-        roster[count] = new Cat(id, name, ch);
+        roster.push_back(new Cat(id, name, ch));
     }
-    roster[count]->set_age(age);
-    roster[count]->set_sex(sex);
-
-    count++;
+    roster.back()->set_age(age);
+    roster.back()->set_sex(sex);
 }
 
-void longest_resident(vector<Pets*>& roster)
+void longest_resident(const vector<Pets*>& roster)
 {
     int longest = roster[0]->get_days_in_shelter();
     int longest_count = 0;
     int pos = 0;
     //find longest day
-    for (int i = 1; i < roster.size(); i++)
+    for (size_t i = 1; i < roster.size(); i++)
     {
         if (roster[i]->get_days_in_shelter() > longest)
         {
@@ -390,8 +393,8 @@ void longest_resident(vector<Pets*>& roster)
         }
     }
 
-    //check the longest residents
-    for (int i = 0; i < roster.size(); i++)
+    //check the longest residents' amount
+    for (size_t i = 0; i < roster.size(); i++)
     {
         if (longest == roster[i]->get_days_in_shelter())
             longest_count++;
@@ -406,15 +409,7 @@ void longest_resident(vector<Pets*>& roster)
             pronouns = "her";
         else
             pronouns = "his";
-        cout << setw(7) << left << "Breed"
-            << setw(6) << left << "Days"
-            << setw(5) << left << "ID"
-            << setw(10) << left << "Name"
-            << setw(6) << left << "Age"
-            << setw(5) << left << "Sex"
-            << setw(8) << left << "Trait"
-            << setw(10) << left << "Adopter"
-            << "Tel." << endl;
+        print_title();
         roster[pos]->print_info(cout, "table");
         cout << "Today is " << pronouns << " DAY " << roster[pos]->get_days_in_shelter() << endl;
         return;
@@ -424,32 +419,22 @@ void longest_resident(vector<Pets*>& roster)
     cout << "There are " << longest_count << " longest residents." << endl;
     cout << "Today is their DAY " << longest << endl;
     cout << "Here is the list of their info: " << endl;
-    cout << setw(7) << left << "Breed"
-            << setw(6) << left << "Days"
-            << setw(5) << left << "ID"
-            << setw(10) << left << "Name"
-            << setw(6) << left << "Age"
-            << setw(5) << left << "Sex"
-            << setw(8) << left << "Trait"
-            << setw(10) << left << "Adopter"
-            << "Tel." << endl;
-    for (int i = 0; i < roster.size(); i++)
+    print_title();
+    for (auto r : roster)
     {
-        if (roster[i]->get_days_in_shelter() == longest)
-            roster[i]->print_info(cout, "table");
+        if (r->get_days_in_shelter() == longest)
+            r->print_info(cout, "table");
     }
 }
 
 void daily_tasks(vector<Pets*>& roster)
 {
-    int need_grooming = 0; //amount of needed grooming
-    int need_checkup = 0; //amount of needed grooming
+    vector<int> grooming_list; //save roster index of grooming
+    vector<int> checkup_list; //save roster index of checkup
     int count = roster.size(); //current roster size
-    int grooming_list[count]; //save roster index of grooming
-    int checkup_list[count]; //save roster index of checkup
 
     //find who need to be groomed or checkup
-    for (int i = 0; i < count; i++) //control roster
+    for (int i = 0; i < count; i++)
     {    
         int day = roster[i]->get_days_in_shelter();
         string name = roster[i]->get_name();
@@ -457,33 +442,35 @@ void daily_tasks(vector<Pets*>& roster)
         {
             string breed = roster[i]->get_breed();
             if (day % 3 == 0 || breed == "Dog")
-                grooming_list[need_grooming++] = i;
+                grooming_list.push_back(i);
             if (day % 7 == 0)
-                checkup_list[need_checkup++] = i;
+                checkup_list.push_back(i);
         }
     }
 
     //print the info
-    cout << endl << "Grooming Needed:"<< endl;
-    if (need_grooming == 0)
+    cout << endl;
+    cout << "Grooming Needed:"<< endl;
+    if (grooming_list.size() == 0)
         cout << "*No pet needs to be groomed*" << endl;
     else
     {    
         cout << setw(5) << left << "ID" << "Name" << endl;
-        for (int i = 0; i < need_grooming; i++)
+        for (size_t i = 0; i < grooming_list.size(); i++)
         {
             cout << setw(5) << left << roster[grooming_list[i]]->get_id() 
                             << roster[grooming_list[i]]->get_name() << endl;
         }
     }
+
     cout << endl;
     cout << "Checkup Needed:"<< endl;
-    if (need_checkup == 0)
+    if (checkup_list.size() == 0)
         cout << "*No pet needs a checkup*" << endl;
     else
     {    
         cout << setw(5) << left << "ID" << "Name" << endl;
-        for (int i = 0; i < need_checkup; i++)
+        for (size_t i = 0; i < checkup_list.size(); i++)
         {
             cout << setw(5) << left << roster[checkup_list[i]]->get_id() 
                             << roster[checkup_list[i]]->get_name() << endl;
@@ -503,19 +490,16 @@ void save(vector<Pets*>& roster, int max)
     cout << "Saving..." << endl;
     
     ofs << max << endl;
-    cout << setw(7) << left << "Breed"
-            << setw(6) << left << "Days"
-            << setw(5) << left << "ID"
-            << setw(10) << left << "Name"
-            << setw(6) << left << "Age"
-            << setw(5) << left << "Sex"
-            << setw(8) << left << "Trait"
-            << setw(10) << left << "Adopter"
-            << "Tel." << endl;
-    for (auto r : roster)
+    print_title();
+    for (size_t i = 0; i < roster.size(); i++)
     {
-        r->print_info(cout, "table"); //print
-        r->print_info(ofs, "csv"); //file
+        roster[i]->print_info(cout, "table"); //print
+        roster[i]->print_info(ofs, "csv"); //file
+        if (i != roster.size() - 1)
+        {
+            cout << endl;
+            ofs << endl;
+        }
     }
     cout << "Completely Save" << endl;
 }
@@ -530,7 +514,7 @@ void exit_the_program(vector<Pets*>& roster)
 
 
 //contact adopter
-void remove_fullday(vector<Pets*> roster)
+void remove_fullday(vector<Pets*>& roster)
 {
     //get removed pets' count
     int count = roster.size();
@@ -542,6 +526,7 @@ void remove_fullday(vector<Pets*> roster)
             delete roster[i];
             roster.erase(roster.begin() + i);
             remove_count++;
+
             //check the index member again
             i--;
         }
@@ -555,34 +540,32 @@ void remove_fullday(vector<Pets*> roster)
     }
 }
 
-void contact_announce(vector<Pets*>& roster, int count, int &waiting_count, int &having_count)
+void contact_announce(vector<Pets*>& roster, vector<Pets*>& waiting_roster, vector<Pets*>& having_roster)
 {
     //reset
-    waiting_count = 0;
-    having_count = 0;
-    vector<Pets*> waiting;
-    vector<Pets*> having;
-    for (int i = 0; i < count; i++)
+    waiting_roster.clear();
+    having_roster.clear();
+    for (size_t i = 0; i < roster.size(); i++)
     {
         int days = roster[i]->get_days_in_shelter();
         //no interested adopter
         if (days >= 10 && roster[i]->get_adopter() == nullptr)
-            waiting.push_back(roster[i]);
+            waiting_roster.push_back(roster[i]);
         //have interested adopter
         else if (days >= 10 && roster[i]->get_adopter() != nullptr)
-            having.push_back(roster[i]);
+            having_roster.push_back(roster[i]);
     }
     //display
-    if (waiting_count > 0)
-        cout << "[Announcement: " << waiting_count << " pet(s) are waiting for their adopter.]" << endl;
+    if (waiting_roster.size() > 0)
+        cout << "[Announcement: " << waiting_roster.size() << " pet(s) are waiting for their adopter.]" << endl;
 
-    if (having_count > 0)
-        cout << "[Announcement: Time to adopt " << having_count << " pet(s).]" << endl;
+    if (having_roster.size() > 0)
+        cout << "[Announcement: Time to adopt " << having_roster.size() << " pet(s).]" << endl;
 }
 
+//list for pets waiting for interested adopter
 void contact_needed_list(const vector<Pets*>& roster, vector<Pets*>& waiting)
 {
-    //list for pets waiting for interested adopter
     int count = roster.size();
     for (int i = 0; i < count; i++)
     {
@@ -592,9 +575,9 @@ void contact_needed_list(const vector<Pets*>& roster, vector<Pets*>& waiting)
     }
 }
 
+//list for pets waiting for being adopted (already have an intersted adopter)
 void get_having_list(const vector<Pets*>& roster, vector<Pets*>& having)
 {
-    //list for pets waiting for being adopted (already have an intersted adopter)
     int count = roster.size();
     for (int i = 0; i < count; i++)
     {
@@ -604,67 +587,49 @@ void get_having_list(const vector<Pets*>& roster, vector<Pets*>& having)
     }
 }
 
-void view_contact_needed(Pets** waiting_roster, int waiting_count, Pets** having_roster, int having_count)
+void view_contact_needed(const vector<Pets*>& waiting_roster, const vector<Pets*>& having_roster)
 {
-    if (waiting_count > 0)
+    if (waiting_roster.size() > 0)
     {
         cout << "Pet(s) waiting for interested adopter:" << endl;
-        cout << setw(7) << left << "Breed"
-            << setw(6) << left << "Days"
-            << setw(5) << left << "ID"
-            << setw(10) << left << "Name"
-            << setw(6) << left << "Age"
-            << setw(5) << left << "Sex"
-            << setw(8) << left << "Trait"
-            << setw(10) << left << "Adopter"
-            << "Tel." << endl;
-        for (int i = 0; i < waiting_count; i++)
+        print_title();
+        for (size_t i = 0; i < waiting_roster.size(); i++)
         {
             waiting_roster[i]->print_info(cout, "table");
         }
     }
-    if (having_count > 0)
+    if (having_roster.size() > 0)
     {
         cout << endl;
         cout << "Pet(s) can be adopted:" << endl;
-        cout << setw(7) << left << "Breed"
-            << setw(6) << left << "Days"
-            << setw(5) << left << "ID"
-            << setw(10) << left << "Name"
-            << setw(6) << left << "Age"
-            << setw(5) << left << "Sex"
-            << setw(8) << left << "Trait"
-            << setw(10) << left << "Adopter"
-            << "Tel." << endl;
-        for (int i = 0; i < having_count; i++)
+        print_title();
+        for (size_t i = 0; i < having_roster.size(); i++)
         {
             having_roster[i]->print_info(cout, "table");
         }
     }
 }
 
-void contact_adopter(vector<Pets*>& roster)
+void contact_adopter(vector<Pets*>& roster, vector<Pets*>& waiting_roster, vector<Pets*>& having_roster)
 {
     bool exit = false;
     do
     {
         //reset
-        vector<Pets*> waiting_list;
-        vector<Pets*> having_list;
-        Pets** waiting_list = contact_needed_list(roster, count, waiting_count);
-        Pets** having_list = get_having_list(roster, count, having_count);
-        contact_announce(roster, count, waiting_count, having_count);
+        contact_needed_list(roster, waiting_roster);
+        get_having_list(roster, having_roster);
+        contact_announce(roster, waiting_roster, having_roster);
         int option = contact_menu(4);
         switch(option)
         {
             case 1:
-                become_interested_adopter(roster, count);
+                become_interested_adopter(roster);
                 break;
             case 2:
-                adopt_pet(roster, count);
+                adopt_pet(having_roster);
                 break;
             case 3:
-                view_contact_needed(waiting_list, waiting_count, having_list, having_count);
+                view_contact_needed(waiting_roster, having_roster);
                 break;
             case 4:
                 exit = true;
@@ -674,7 +639,7 @@ void contact_adopter(vector<Pets*>& roster)
     
 }
 
-void become_interested_adopter(Pets** roster, int count)
+void become_interested_adopter(vector<Pets*>& roster)
 {
     cout << "Enter your preferences to find your ideal pet." << endl;
     string breed;
@@ -711,23 +676,22 @@ void become_interested_adopter(Pets** roster, int count)
     }
 
     //preferences match pets' count
-    int match_count = 0;
-    int match_list[count]; //save index of matching pets
-    for (int i = 0; i < count; i++)
+    vector<int> match_list; //save index of matching pets
+    for (size_t i = 0; i < roster.size(); i++)
     {
         if (breed == roster[i]->get_breed() && trait == roster[i]->get_trait())
-            match_list[match_count++] = i;
+            match_list.push_back(i);
     }
 
     //not match
-    if (match_count == 0)
+    if (match_list.size() == 0)
     {
         cout << "No pet fits your prefrences currently.\nPlease check it later." << endl;
         return;
     }
 
     //match
-    cout << "Here match " << match_count << " pet(s):" << endl;
+    cout << "Here match " << match_list.size() << " pet(s):" << endl;
     cout << setw(7) << left << "Breed"
             << setw(6) << left << "Days"
             << setw(5) << left << "ID"
@@ -735,13 +699,13 @@ void become_interested_adopter(Pets** roster, int count)
             << setw(6) << left << "Age"
             << setw(5) << left << "Sex"
             << "Trait" << endl;
-    for (int i = 0; i < match_count; i++)
+    for (size_t i = 0; i < match_list.size(); i++)
         roster[match_list[i]]->print_info(cout, "table");
     
+    //ask for adopter's preferred pet
     string id;
     bool valid_id = false;
     int interested = -1;
-    //ask for willing
     do
     {
         cout << "Enter ID you are interested in (one only; \"N\" if none): ";
@@ -751,7 +715,8 @@ void become_interested_adopter(Pets** roster, int count)
             cout << "No Worries! Feel free to check back anytime." << endl;
             return;
         }
-        for (int i = 0; i < match_count; i++)
+        //get interested pet's index
+        for (size_t i = 0; i < match_list.size(); i++)
         {
             if (id == roster[match_list[i]]->get_id())
             {
@@ -759,6 +724,7 @@ void become_interested_adopter(Pets** roster, int count)
                 interested = match_list[i];
             }
         }
+        //check if ID is valid
         if (valid_id == false)
             cout << "Invalid ID." << endl;
     } while (!valid_id && id != "N");
@@ -773,9 +739,9 @@ void become_interested_adopter(Pets** roster, int count)
     roster[interested]->set_adopter(name, tel);
 }
 
-void adopt_pet(Pets** roster, int &count)
+void adopt_pet(vector<Pets*>& roster)
 {
-    //get person info
+    //get the person info
     string name;
     string tel;
     cout << "Please enter your name: ";
@@ -784,12 +750,8 @@ void adopt_pet(Pets** roster, int &count)
     cin >> tel;
 
     //find matching info
-    for (int i = 0; i < count; i++)
+    for (size_t i = 0; i < roster.size(); i++)
     {
-        //check pet's adopter existence
-        if (roster[i]->get_adopter() == nullptr)
-            continue;
-
         //matching info found
         if (roster[i]->get_adopter()->get_name() == name && roster[i]->get_adopter()->get_tel() == tel)
         {
@@ -800,18 +762,26 @@ void adopt_pet(Pets** roster, int &count)
             {   
                 cin >> yn;
                 //adopt now
-                if (yn != 'n' && yn != 'y')
+                if (yn != 'n' && yn != 'y') //invalid input
                 {
                     cout << "Please enter \'y\' or \'n\'>> ";
+                    continue;
                 }
-                //adopt later or give up the chance
-                else if (yn == 'n')
+                
+                if (yn == 'n') //adopt later or give up the chance
                 {
+                    cout << "Are you still interested in adopting your pet (y/n)? ";
                     do
                     {
-                        //give up
-                        cout << "Are you still interested in adopting your pet (y/n)? ";
                         cin >> yn;
+                        //invalid input
+                        if (yn != 'y' && yn != 'n')
+                        {
+                            cout << "Please enter \'y\' or \'n\'>> ";
+                            continue;
+                        }
+
+                        //give up
                         if (yn == 'n')
                         {
                             roster[i]->clear_adopter();
@@ -829,12 +799,8 @@ void adopt_pet(Pets** roster, int &count)
         
             //clear pet
             delete roster[i];
-            //shift left
-            for (int j = i; j < count; j++)
-            {
-                roster[j] = roster[j+1];
-            }
-            count--;
+            roster.erase(roster.begin() + i);
+
             return;
         }
     }

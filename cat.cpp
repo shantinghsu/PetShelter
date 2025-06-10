@@ -36,7 +36,7 @@ void Cat::print_info(ostream& out, string mode) const
         out << setw(8) << left << trait;
         if (get_adopter() == nullptr)
         {
-            cout << endl;
+            out << endl;
             return;
         }
         out << setw(10) << left << get_adopter()->get_name()

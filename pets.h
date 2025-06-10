@@ -29,7 +29,7 @@ class Pets
         int get_days_in_shelter() const;
         virtual void print_info(std::ostream&, std::string) const;
 
-        ~Pets();
+        virtual ~Pets();
 
     protected:
         std::string breed;

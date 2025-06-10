@@ -1,0 +1,6 @@
+10
+Cat,13,001,Luna,14,F,Long,,
+Dog,7,002,Max,8.5,M,Medium,,
+Cat,3,003,Daisy,10.5,F,Short,,
+Dog,14,004,Charlie,11,M,Medium,,
+Cat,9,005,Chloe,3.5,F,Long,,
